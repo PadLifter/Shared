@@ -36,7 +36,7 @@ void smtpCallback(SMTP_Status status);
 #define READY 3
 
 
-const int temp1_pin = A0;
+const int temp1_pin = A2;
 //NTC sensor constants
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
