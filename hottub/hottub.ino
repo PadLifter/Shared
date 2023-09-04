@@ -150,7 +150,9 @@ void setup() {
 
    
   //Send raw text message
-  String textMsg = "Tääl ollaa iha kuivilla, nyt sitä puuta pönttöön!";
+  float heat = measureHeatTemp();
+  String textMsg = "Temperature is";
+  textMsg = textMsg + heat;
   message.text.content = textMsg.c_str();
   message.text.charSet = "us-ascii";
   message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
@@ -185,12 +187,14 @@ void setup() {
 
 
 void loop() {
-  measureHeatTemp();
+  /*measureHeatTemp();
 
   delay(1000);  // delay in between reads for clear read from serial
 
   /* Callback function to get the Email sending status */
-void smtpCallback(SMTP_Status status){
+}
+
+void smtpCallback(SMTP_Status status) {
   /* Print the current status */
   Serial.println(status.info());
 
@@ -225,5 +229,7 @@ void smtpCallback(SMTP_Status status){
 
     // You need to clear sending result as the memory usage will grow up.
     smtp.sendingResult.clear();
+  }
 }
+
 
