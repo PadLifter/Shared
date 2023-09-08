@@ -11,7 +11,8 @@
 #define API_KEY "REPLACE_WITH_YOUR_IFTTT_API_KEY"
 
 // NTC sensor constants
-const int temp1_pin = A2;
+const int temp1_pin = A2;   // Heated water
+const int temp2_pin = A3;   // Tub
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
 const float invT25 = 1.00 / 298.15;
@@ -29,6 +30,11 @@ float measureHeatTemp() {
 
 // Measure temperature of tub water
 float measureTubTemp() {
+  uint16_t temp_adc = analogRead(temp2_pin);
+  float temp_c = 100 * temp_adc / adcMax; // 0...100 'C
+  Serial.print("Tub water temp: ");
+  Serial.println(temp_c);
+  return temp_c;
 }
 
 
