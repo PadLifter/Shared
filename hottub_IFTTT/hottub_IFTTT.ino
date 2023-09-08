@@ -5,10 +5,10 @@
 
 #include <WiFi.h>
 
-#define WIFI_SSID "S23U"
-#define WIFI_PASSWORD "98709870"
+#define WIFI_SSID "eme"
+#define WIFI_PASSWORD "sanasala"
 #define HOST "maker.ifttt.com"
-#define API_KEY "REPLACE_WITH_YOUR_IFTTT_API_KEY"
+#define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
@@ -64,7 +64,9 @@ void loop() {
 
 // FUNCTIONS //
 void trigger_IFTTT() {
-  String message;
+  String message = "test text"; // Change according to message type!
+  String heatTemp = String(measureHeatTemp(), 2);
+  String tubTemp = String(measureTubTemp(), 2);
   const int httpPort = 80;
   WiFiClient client;
   
@@ -75,15 +77,18 @@ void trigger_IFTTT() {
     return;
   }
 
-  String url = "/trigger/event_name/with/key/"; // replace event_name with own!!!
+  // template: https://maker.ifttt.com/trigger/{event}/with/key/{webhooks_key}?value1=value1&value2=value2&value3=value3
+  String url = "/trigger/hot_tub/with/key/";
   url += API_KEY;
-
   Serial.print("Requesting URL: ");
   Serial.println(url);
   client.print(String("POST ") + url + " HTTP/1.1\r\n" +
                       "Host: " + HOST + "\r\n" +
                       "Content-Type: application/x-www-form-urlencoded\r\n" +
                       "Content-Length: 13\r\n\r\n" +
-                      "value1=" + message + "\r\n");
-  
+                      "value1=" + message + "&" +
+                      "value2=" + heatTemp + "&" +
+                      "value3=" + tubTemp + "&" + "\r\n");
 }
+
+
