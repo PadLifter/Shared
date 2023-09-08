@@ -9,6 +9,8 @@
 #define WIFI_PASSWORD "sanasala"
 #define HOST "maker.ifttt.com"
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
+#define HTTPPORT 80
+
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
@@ -54,6 +56,8 @@ void setup() {
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
+
+  trigger_IFTTT();
 }
 
 
@@ -64,15 +68,21 @@ void loop() {
 
 // FUNCTIONS //
 void trigger_IFTTT() {
-  String message = "test text"; // Change according to message type!
+  WiFiClient client;
   String heatTemp = String(measureHeatTemp(), 2);
   String tubTemp = String(measureTubTemp(), 2);
-  const int httpPort = 80;
-  WiFiClient client;
+  String message = "test_text"; // Change according to message type!
   
+  // Make and count POST content
+  String content =  "value1=" + message + "&" +
+                    "value2=" + heatTemp + "&" +
+                    "value3=" + tubTemp;
+  String length = (String)content.length();
+
+  // POST data
   Serial.print("connecting to ");
   Serial.println(HOST);
-  if (!client.connect(HOST, httpPort)) {
+  if (!client.connect(HOST, HTTPPORT)) {
     Serial.println("connection failed");
     return;
   }
@@ -85,10 +95,14 @@ void trigger_IFTTT() {
   client.print(String("POST ") + url + " HTTP/1.1\r\n" +
                       "Host: " + HOST + "\r\n" +
                       "Content-Type: application/x-www-form-urlencoded\r\n" +
-                      "Content-Length: 13\r\n\r\n" +
-                      "value1=" + message + "&" +
-                      "value2=" + heatTemp + "&" +
-                      "value3=" + tubTemp + "&" + "\r\n");
+                      "Content-Length: " + length + "\r\n\r\n" +
+                      content + "\r\n");
+
+  Serial.print(String("POST ") + url + " HTTP/1.1\r\n" +
+                      "Host: " + HOST + "\r\n" +
+                      "Content-Type: application/x-www-form-urlencoded\r\n" +
+                      "Content-Length: " + length + "\r\n\r\n" +
+                      content + "\r\n");
 }
 
 
