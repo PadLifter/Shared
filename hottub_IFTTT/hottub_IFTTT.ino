@@ -1,23 +1,29 @@
 // Home Automation - Hot tub
 // Eemeli Halme & Leevi Kinnunen
 // 2023
-// based on https://randomnerdtutorials.com/esp32-door-status-monitor-email/
+// IFTTT: https://randomnerdtutorials.com/esp32-door-status-monitor-email/
+// NTP: https://randomnerdtutorials.com/esp32-date-time-ntp-client-server-arduino/
 
 #include <WiFi.h>
+#include <time.h>
 
 #define WIFI_SSID "eme"
 #define WIFI_PASSWORD "sanasala"
+#define CONNECTION_TIMEOUT 10
 #define HOST "maker.ifttt.com"
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
+#define NTP_SERVER "pool.ntp.org"
+#define GMT_OFFSET_S 7200
+#define DAYLIGHT_OFFSET_S 3600
 
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
 const int temp2_pin = A3;   // Tub
+const float invT25 = 1.00 / 298.15;
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
-const float invT25 = 1.00 / 298.15;
 
 
 // Measure temperature of heated water
@@ -45,19 +51,28 @@ void setup() {
   Serial.begin(115200);
   analogReadResolution(12);  // 0-4096
 
-  Serial.println();
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
+  int timeout_counter = 0;
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
-    delay(300);
+    delay(200);
+    timeout_counter++;
+    if(timeout_counter >= CONNECTION_TIMEOUT * 5) {
+      Serial.println();
+      Serial.println("Failed to connect, restarting...");
+      ESP.restart();
+    }
   }
-  Serial.println();
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
 
-  trigger_IFTTT();
+  // Initialize and get time from NTP server
+  configTime(GMT_OFFSET_S, DAYLIGHT_OFFSET_S, NTP_SERVER);
+  getTime();
+
+  triggerIFTTT();
 }
 
 
@@ -67,7 +82,17 @@ void loop() {
 
 
 // FUNCTIONS //
-void trigger_IFTTT() {
+void getTime() {
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+}
+
+
+void triggerIFTTT() {
   WiFiClient client;
   String heatTemp = String(measureHeatTemp(), 2);
   String tubTemp = String(measureTubTemp(), 2);
@@ -97,12 +122,13 @@ void trigger_IFTTT() {
                       "Content-Type: application/x-www-form-urlencoded\r\n" +
                       "Content-Length: " + length + "\r\n\r\n" +
                       content + "\r\n");
-
+  /*
   Serial.print(String("POST ") + url + " HTTP/1.1\r\n" +
                       "Host: " + HOST + "\r\n" +
                       "Content-Type: application/x-www-form-urlencoded\r\n" +
                       "Content-Length: " + length + "\r\n\r\n" +
                       content + "\r\n");
+  */
 }
 
 
