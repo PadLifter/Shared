@@ -67,6 +67,10 @@ void loop() {
   measureTubTemp();
 
   if(heating && !ready) {
+    if(heatTemp > 60) {
+      notified = false;
+    }
+    
     // Tub ready
     if (tubTemp >= 60) {
       Serial.println("tub ready");
