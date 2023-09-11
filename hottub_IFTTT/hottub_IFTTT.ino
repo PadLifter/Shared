@@ -27,6 +27,7 @@ const float adcMax = 4096.00;
 
 bool heating = false;
 bool ready = false;
+bool notified = false;
 unsigned long startTime = 0;
 unsigned long notifyTime = 0;
 float heatTemp = 0;
@@ -75,8 +76,9 @@ void loop() {
     }
 
     // Message to add wood
-    else if(heatTemp < 60) {
+    else if(heatTemp < 60 && !notified) {
       Serial.println("add wood");
+      notified = true;
       triggerIFTTT(MSG_HEAT);
     }
 
