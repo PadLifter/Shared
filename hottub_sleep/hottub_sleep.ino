@@ -2,10 +2,8 @@
 // Eemeli Halme & Leevi Kinnunen
 // 2023
 // IFTTT: https://randomnerdtutorials.com/esp32-door-status-monitor-email/
-// NTP: https://randomnerdtutorials.com/esp32-date-time-ntp-client-server-arduino/
 
 #include <WiFi.h>
-#include <time.h>
 
 #define WIFI_SSID "eme"
 #define WIFI_PASSWORD "sanasala"
@@ -13,10 +11,15 @@
 #define HOST "maker.ifttt.com"
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
+#define MESSAGE_INTERVAL_S 10
+// Message types
+#define MSG_START 1
+#define MSG_INFO 2
+#define MSG_HEAT 3
+#define MSG_READY 4
+// Sleep
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
 #define TIME_TO_SLEEP  60        // Time ESP32 will go to sleep (in seconds)
-
-RTC_DATA_ATTR int bootCount = 0;
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
@@ -24,6 +27,14 @@ const int temp2_pin = A3;   // Tub
 const float invT25 = 1.00 / 298.15;
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
+
+RTC_DATA_ATTR bool heating = false;
+RTC_DATA_ATTR bool ready = false;
+RTC_DATA_ATTR bool notified = false;
+RTC_DATA_ATTR unsigned long startTime = 0;
+RTC_DATA_ATTR unsigned long notifyTime = 0;
+float heatTemp = 0;
+float tubTemp = 0;
 
 
 // SETUP //
@@ -48,77 +59,118 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.println();
 
-  triggerIFTTT();
+  //triggerIFTTT();
 }
 
 
 // LOOP //
 void loop() {
-  bool heating;
-  bool ready;
-  unsigned long startTime;
-  float heatTemp = measureHeatTemp();
-  float tubTemp = measureTubTemp();
+  unsigned long currentTime = millis();
+  measureHeatTemp();
+  measureTubTemp();
 
-  // Save start time
-  if(heatTemp > 15) {
-    startTime = millis();
-    bool heating = true;    
+  if(heating && !ready) {
+    if(heatTemp > 60) {
+      notified = false;
+    }
+    
+    // Tub ready
+    if (tubTemp >= 60) {
+      Serial.println("tub ready");
+      heating = false;
+      ready = true;
+      triggerIFTTT(MSG_READY);
+    }
+
+    // Message to add wood
+    else if(heatTemp < 60 && !notified) {
+      Serial.println("add wood");
+      notified = true;
+      triggerIFTTT(MSG_HEAT);
+    }
+
+    // 10 min info
+    else if((currentTime - notifyTime) > (MESSAGE_INTERVAL_S * 1000)){
+      Serial.println("10 min info");
+      notifyTime = currentTime;
+      triggerIFTTT(MSG_INFO);
+    }
   }
-
-  // Message to add wood
-  if(heating && heatTemp < 60) {
-    //triggerIFTTT(addwood);
-  }
-
-  // Tub ready
-  if (tubTemp >= 60) {
-    heating = false;
-    //triggerIFTTT(ready);
-}
-esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-  Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP) +
-  " Seconds");
   
+  // Save start time
+  else if(!heating && heatTemp > 20 && !ready) {
+    Serial.println("heating started");
+    startTime = currentTime;
+    notifyTime = startTime;
+    heating = true;
+    triggerIFTTT(MSG_START);
+  }
+
+  // Go to sleep
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   Serial.println("Going to sleep now");
   delay(1000);
   Serial.flush(); 
   esp_deep_sleep_start();    
-  
 }
 
 
 // FUNCTIONS //
 // Measure temperature of heated water
-float measureHeatTemp() {
+void measureHeatTemp() {
   uint16_t temp_adc = analogRead(temp1_pin);
   // Convert to celcius
-  float temp_c = (1.00 / (invT25 + invBeta * (log(adcMax / (float)temp_adc - 1.00)))) - 273.15;
+  heatTemp = (1.00 / (invT25 + invBeta * (log(adcMax / (float)temp_adc - 1.00)))) - 273.15;
   Serial.print("Heated water temp: ");
-  Serial.println(temp_c);
-  return temp_c;
+  Serial.println(heatTemp);
 }
 
 // Measure temperature of tub water
-float measureTubTemp() {
+void measureTubTemp() {
   uint16_t temp_adc = analogRead(temp2_pin);
-  float temp_c = 100 * temp_adc / adcMax; // 0...100 'C
+  tubTemp = 100 * temp_adc / adcMax; // 0...100 'C
   Serial.print("Tub water temp: ");
-  Serial.println(temp_c);
-  return temp_c;
+  Serial.println(tubTemp);
 }
 
 // Trigger IFTTT with message
-void triggerIFTTT() {
+void triggerIFTTT(int messageType) {
   WiFiClient client;
-  String heatTemp = String(measureHeatTemp(), 2);
-  String tubTemp = String(measureTubTemp(), 2);
-  String message = "test_text"; // Change according to message type!
+  String heatC = String(heatTemp, 2);
+  String tubC = String(tubTemp, 2);
+  String message = "";
+
+  // Make message according to type
+  switch (messageType) {
+    case MSG_START:
+    message = "Heating started";
+    break;
+
+    case MSG_INFO: {
+    unsigned long heatTime = (millis() - startTime) / 1000;
+    int Seconds = heatTime % 60;
+    int Minutes = (heatTime / 60) % 60;
+    int Hours = (heatTime / 3600) % 24;
+    String time = String(Hours) + ":" + String(Minutes) + ":" + String(Seconds);
+    message = "Time heated: ";
+    message += time;
+    }
+    break;
+
+    case MSG_HEAT:
+    message = "Time to add some wood!";
+    break;
+
+    case MSG_READY:
+    message = "Hottub is ready!";
+    break;
+  }
+
   
   // Make and count POST content
   String content =  "value1=" + message + "&" +
-                    "value2=" + heatTemp + "&" +
-                    "value3=" + tubTemp;
+                    "value2=" + heatC + "&" +
+                    "value3=" + tubC;
   String length = (String)content.length();
 
   // POST data
