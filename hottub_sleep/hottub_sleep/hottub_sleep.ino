@@ -13,8 +13,8 @@
 #define HOST "maker.ifttt.com"
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
-#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
+#define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
+#define TIME_TO_SLEEP  60        // Time ESP32 will go to sleep (in seconds)
 
 RTC_DATA_ATTR int bootCount = 0;
 
