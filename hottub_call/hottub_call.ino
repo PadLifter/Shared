@@ -9,9 +9,9 @@
 #define WIFI_PASSWORD "sanasala"
 #define CONNECTION_TIMEOUT 10
 #define HOST "maker.ifttt.com"
-#define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
+#define API_KEY_EMAIL "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
-#define MESSAGE_INTERVAL_S 10
+#define MESSAGE_INTERVAL_S 60
 // Message types
 #define MSG_START 1
 #define MSG_INFO 2
@@ -67,6 +67,10 @@ void loop() {
   measureTubTemp();
 
   if(heating && !ready) {
+    if(heatTemp > 60) {
+      notified = false;
+    }
+
     // Tub ready
     if (tubTemp >= 60) {
       Serial.println("tub ready");
@@ -127,11 +131,13 @@ void triggerIFTTT(int messageType) {
   String heatC = String(heatTemp, 2);
   String tubC = String(tubTemp, 2);
   String message = "";
+  String event = "";
 
   // Make message according to type
   switch (messageType) {
     case MSG_START:
     message = "Heating started";
+    event = "hot_tub";
     break;
 
     case MSG_INFO: {
@@ -142,15 +148,18 @@ void triggerIFTTT(int messageType) {
     String time = String(Hours) + ":" + String(Minutes) + ":" + String(Seconds);
     message = "Time heated: ";
     message += time;
+    event = "hot_tub";
     }
     break;
 
     case MSG_HEAT:
     message = "Time to add some wood!";
+    event = "hot_tub";
     break;
 
     case MSG_READY:
     message = "Hottub is ready!";
+    event = "hot_tub_call";
     break;
   }
 
@@ -170,8 +179,9 @@ void triggerIFTTT(int messageType) {
   }
 
   // template: https://maker.ifttt.com/trigger/{event}/with/key/{webhooks_key}?value1=value1&value2=value2&value3=value3
-  String url = "/trigger/hot_tub/with/key/";
-  url += API_KEY;
+  //String url = "/trigger/hot_tub/with/key/";
+  String url = "/trigger/" + event + "/with/key/";
+  url += API_KEY_EMAIL;
   Serial.print("Requesting URL: ");
   Serial.println(url);
   client.print(String("POST ") + url + " HTTP/1.1\r\n" +
