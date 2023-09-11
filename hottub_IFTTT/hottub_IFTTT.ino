@@ -14,6 +14,11 @@
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
 #define MESSAGE_INTERVAL_S 10
+// Message types
+#define MSG_START 1
+#define MSG_INFO 2
+#define MSG_HEAT 3
+#define MSG_READY 4
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
@@ -63,33 +68,35 @@ void loop() {
   measureTubTemp();
 
   if(heating && !ready) {
-    // Message to add wood
-    if(heatTemp < 60) {
-      //triggerIFTTT(addwood);
-      Serial.println("add wood");
-    }
-
     // Tub ready
-    else if (tubTemp >= 60) {
+    if (tubTemp >= 60) {
+      Serial.println("tub ready");
       heating = false;
       ready = true;
-      //triggerIFTTT(ready);
-      Serial.println("tub ready");
+      triggerIFTTT(MSG_READY);
+    }
+
+    // Message to add wood
+    else if(heatTemp < 60) {
+      Serial.println("add wood");
+      triggerIFTTT(MSG_HEAT);
     }
 
     // 10 min info
     else if((currentTime - notifyTime) > (MESSAGE_INTERVAL_S * 1000)){
-      notifyTime = currentTime;
       Serial.println("10 min info");
-      triggerIFTTT();
+      notifyTime = currentTime;
+      triggerIFTTT(MSG_INFO);
     }
   }
   
   // Save start time
-  else if(!heating && heatTemp > 15 && !ready) {
+  else if(!heating && heatTemp > 20 && !ready) {
+    Serial.println("heating started");
     startTime = currentTime;
     notifyTime = startTime;
     heating = true;
+    triggerIFTTT(MSG_START);
   }
 
   delay(1000);
@@ -115,11 +122,27 @@ void measureTubTemp() {
 }
 
 // Trigger IFTTT with message
-void triggerIFTTT() {
+void triggerIFTTT(int messageType) {
   WiFiClient client;
   String heatC = String(heatTemp, 2);
   String tubC = String(tubTemp, 2);
-  String message = "test_text"; // Change according to message type!
+  String message = "";
+  // Make message according to type
+  switch (messageType) {
+    case MSG_START:
+
+    break;
+    case MSG_INFO:
+
+    break;
+    case MSG_HEAT:
+
+    break;
+    case MSG_READY:
+
+    break;
+  }
+
   
   // Make and count POST content
   String content =  "value1=" + message + "&" +
