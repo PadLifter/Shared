@@ -13,6 +13,7 @@
 #define HOST "maker.ifttt.com"
 #define API_KEY "dfPt1cD9pYzS4k9xeypNCz"
 #define HTTPPORT 80
+#define MESSAGE_INTERVAL_S 10
 
 // NTC sensor constants
 const int temp1_pin = A2;   // Heated water
@@ -20,6 +21,13 @@ const int temp2_pin = A3;   // Tub
 const float invT25 = 1.00 / 298.15;
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
+
+bool heating = false;
+bool ready = false;
+unsigned long startTime = 0;
+unsigned long notifyTime = 0;
+float heatTemp = 0;
+float tubTemp = 0;
 
 
 // SETUP //
@@ -44,68 +52,79 @@ void setup() {
   Serial.println(WiFi.localIP());
   Serial.println();
 
-  triggerIFTTT();
+  //triggerIFTTT();
 }
 
 
 // LOOP //
 void loop() {
-  bool heating;
-  bool ready;
-  unsigned long startTime;
-  float heatTemp = measureHeatTemp();
-  float tubTemp = measureTubTemp();
+  unsigned long currentTime = millis();
+  measureHeatTemp();
+  measureTubTemp();
 
+  if(heating && !ready) {
+    // Message to add wood
+    if(heatTemp < 60) {
+      //triggerIFTTT(addwood);
+      Serial.println("add wood");
+    }
+
+    // Tub ready
+    else if (tubTemp >= 60) {
+      heating = false;
+      ready = true;
+      //triggerIFTTT(ready);
+      Serial.println("tub ready");
+    }
+
+    // 10 min info
+    else if((currentTime - notifyTime) > (MESSAGE_INTERVAL_S * 1000)){
+      notifyTime = currentTime;
+      Serial.println("10 min info");
+      triggerIFTTT();
+    }
+  }
+  
   // Save start time
-  if(heatTemp > 15) {
-    startTime = millis();
-    bool heating = true;    
+  else if(!heating && heatTemp > 15 && !ready) {
+    startTime = currentTime;
+    notifyTime = startTime;
+    heating = true;
   }
 
-  // Message to add wood
-  if(heating && heatTemp < 60) {
-    //triggerIFTTT(addwood);
-  }
-
-  // Tub ready
-  if (tubTemp => 60) {
-    heating = false;
-    //triggerIFTTT(ready);
-  }
+  delay(1000);
 }
 
 
 // FUNCTIONS //
 // Measure temperature of heated water
-float measureHeatTemp() {
+void measureHeatTemp() {
   uint16_t temp_adc = analogRead(temp1_pin);
   // Convert to celcius
-  float temp_c = (1.00 / (invT25 + invBeta * (log(adcMax / (float)temp_adc - 1.00)))) - 273.15;
+  heatTemp = (1.00 / (invT25 + invBeta * (log(adcMax / (float)temp_adc - 1.00)))) - 273.15;
   Serial.print("Heated water temp: ");
-  Serial.println(temp_c);
-  return temp_c;
+  Serial.println(heatTemp);
 }
 
 // Measure temperature of tub water
-float measureTubTemp() {
+void measureTubTemp() {
   uint16_t temp_adc = analogRead(temp2_pin);
-  float temp_c = 100 * temp_adc / adcMax; // 0...100 'C
+  tubTemp = 100 * temp_adc / adcMax; // 0...100 'C
   Serial.print("Tub water temp: ");
-  Serial.println(temp_c);
-  return temp_c;
+  Serial.println(tubTemp);
 }
 
 // Trigger IFTTT with message
 void triggerIFTTT() {
   WiFiClient client;
-  String heatTemp = String(measureHeatTemp(), 2);
-  String tubTemp = String(measureTubTemp(), 2);
+  String heatC = String(heatTemp, 2);
+  String tubC = String(tubTemp, 2);
   String message = "test_text"; // Change according to message type!
   
   // Make and count POST content
   String content =  "value1=" + message + "&" +
-                    "value2=" + heatTemp + "&" +
-                    "value3=" + tubTemp;
+                    "value2=" + heatC + "&" +
+                    "value3=" + tubC;
   String length = (String)content.length();
 
   // POST data
