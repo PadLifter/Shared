@@ -2,10 +2,8 @@
 // Eemeli Halme & Leevi Kinnunen
 // 2023
 // IFTTT: https://randomnerdtutorials.com/esp32-door-status-monitor-email/
-// NTP: https://randomnerdtutorials.com/esp32-date-time-ntp-client-server-arduino/
 
 #include <WiFi.h>
-#include <time.h>
 
 #define WIFI_SSID "eme"
 #define WIFI_PASSWORD "sanasala"
@@ -127,19 +125,30 @@ void triggerIFTTT(int messageType) {
   String heatC = String(heatTemp, 2);
   String tubC = String(tubTemp, 2);
   String message = "";
+
   // Make message according to type
   switch (messageType) {
     case MSG_START:
-
+    message = "Heating started";
     break;
-    case MSG_INFO:
 
+    case MSG_INFO: {
+    unsigned long heatTime = (millis() - startTime) / 1000;
+    int Seconds = heatTime % 60;
+    int Minutes = (heatTime / 60) % 60;
+    int Hours = (heatTime / 3600) % 24;
+    String time = String(Hours) + ":" + String(Minutes) + ":" + String(Seconds);
+    message = "Time heated: ";
+    message += time;
+    }
     break;
+
     case MSG_HEAT:
-
+    message = "Time to add some wood!";
     break;
-    case MSG_READY:
 
+    case MSG_READY:
+    message = "Hottub is ready!";
     break;
   }
 
