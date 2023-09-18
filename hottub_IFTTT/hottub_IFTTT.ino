@@ -67,6 +67,13 @@ void loop() {
   measureTubTemp();
 
   if(heating && !ready) {
+    // Message to add wood
+    if(heatTemp < 60 && !notified) {
+      Serial.println("add wood");
+      notified = true;
+      triggerIFTTT(MSG_HEAT);
+    }
+
     if(heatTemp > 60) {
       notified = false;
     }
@@ -79,15 +86,8 @@ void loop() {
       triggerIFTTT(MSG_READY);
     }
 
-    // Message to add wood
-    else if(heatTemp < 60 && !notified) {
-      Serial.println("add wood");
-      notified = true;
-      triggerIFTTT(MSG_HEAT);
-    }
-
     // 10 min info
-    else if((currentTime - notifyTime) > (MESSAGE_INTERVAL_S * 1000)){
+    if((currentTime - notifyTime) > (MESSAGE_INTERVAL_S * 1000)){
       Serial.println("10 min info");
       notifyTime = currentTime;
       triggerIFTTT(MSG_INFO);

@@ -4,15 +4,11 @@
 
 
 #include <Arduino.h>
-#if defined(ESP32)
-  #include <WiFi.h>
-#elif defined(ESP8266)
-  #include <ESP8266WiFi.h>
-#endif
+#include <WiFi.h>
 #include <ESP_Mail_Client.h>
 
-#define WIFI_SSID "S23U"
-#define WIFI_PASSWORD "98709870"
+#define WIFI_SSID "eme"
+#define WIFI_PASSWORD "sanasala"
 
 /** The smtp host name e.g. smtp.gmail.com for GMail or smtp.office365.com for Outlook or smtp.mail.yahoo.com */
 #define SMTP_HOST "smtp.gmail.com" 
@@ -31,39 +27,13 @@ SMTPSession smtp;
 /* Callback function to get the Email sending status */
 void smtpCallback(SMTP_Status status);
 
-#define STATUS 1
-#define HEAT 2
-#define READY 3
-
-
-const int temp1_pin = A2;
 //NTC sensor constants
+const int temp1_pin = A2;
 const float invBeta = 1.00 / 3435.00;
 const float adcMax = 4096.00;
 const float invT0 = 1.00 / 298.15;
 
-// Send info about heating
-void sendMail(int msg_type) {
-  //Parse message based on type
-  switch (msg_type) {
-  case STATUS:
-    // statements
-    break;
-  case HEAT:
-    // statements
-    break;
-    case READY:
-    // statements
-    break;
-  default:
-    // statements
-    break;
-}
-
-  // Send message
-
-
-}
+String sendTime = "";
 
 
 // Measure temperature of heated water
@@ -75,11 +45,6 @@ float measureHeatTemp() {
   Serial.println(temp_c);
   return temp_c;
 }
-
-// Measure temperature of tub water
-float measureTubTemp() {
-}
-
 
 void setup() {
   Serial.begin(115200);
@@ -121,16 +86,12 @@ void setup() {
   config.login.password = AUTHOR_PASSWORD;
   config.login.user_domain = "";
 
-  /*
-  Set the NTP config time
-  For times east of the Prime Meridian use 0-12
-  For times west of the Prime Meridian add 12 to the offset.
-  Ex. American/Denver GMT would be -6. 6 + 12 = 18
-  See https://en.wikipedia.org/wiki/Time_zone for a list of the GMT/UTC timezone offsets
-  */
   config.time.ntp_server = F("pool.ntp.org,time.nist.gov");
-  config.time.gmt_offset = 3;
-  config.time.day_light_offset = 0;
+  config.time.gmt_offset = 2;
+  config.time.day_light_offset = 3600;
+
+  //sendTime = getDateTimeString();
+  //Serial.println(sendTime);
 
   /* Declare the message class */
   SMTP_Message message;
@@ -138,21 +99,16 @@ void setup() {
   /* Set the message headers */
   message.sender.name = F("HOT-TUB");
   message.sender.email = AUTHOR_EMAIL;
-  message.subject = F("Add wood to hot tub");
+  message.subject = F("Hottub temperature");
   message.addRecipient(F("Eemeli"), RECIPIENT_EMAIL);
-    
-  /*Send HTML message*/
-  /*String htmlMsg = "<div style=\"color:#2f4468;\"><h1>Hello World!</h1><p>- Sent from ESP board</p></div>";
-  message.html.content = htmlMsg.c_str();
-  message.html.content = htmlMsg.c_str();
-  message.text.charSet = "us-ascii";
-  message.html.transfer_encoding = Content_Transfer_Encoding::enc_7bit;*/
-
    
   //Send raw text message
   float heat = measureHeatTemp();
-  String textMsg = "Temperature is";
+  String textMsg = "Temperature is ";
   textMsg = textMsg + heat;
+  //textMsg = textMsg + " Time: ";
+  //textMsg = textMsg + sendTime;
+
   message.text.content = textMsg.c_str();
   message.text.charSet = "us-ascii";
   message.text.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
@@ -187,11 +143,7 @@ void setup() {
 
 
 void loop() {
-  /*measureHeatTemp();
 
-  delay(1000);  // delay in between reads for clear read from serial
-
-  /* Callback function to get the Email sending status */
 }
 
 void smtpCallback(SMTP_Status status) {
