@@ -1,11 +1,12 @@
-import ADS1115
 import machine
+from machine import I2C, Pin
 
-sda=machine.Pin(16)
-scl=machine.Pin(17)
-i2c=machine.I2C(0, sda=sda, scl=scl, freq=400000)
-print('Scan i2c bus...')
-devices = i2c.scan()
+
+dev = I2C(1, freq=400000, scl=Pin(19), sda=Pin(18))
+devices = dev.scan()
+for device in devices: print(device)
+#address = 72
+
 if len(devices) == 0:
     print("No i2c device !")
 else:
