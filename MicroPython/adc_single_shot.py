@@ -9,14 +9,14 @@
 # 
 #####################################################################################
 
-from machine import I2C
+from machine import I2C, Pin
 from time import sleep
 from ADS1115 import *
 
 ADS1115_ADDRESS = 0x48
 
-i2c = I2C(1)
-adc = ADS1115(ADS1115_ADDRESS, i2c=i2c)
+i2c = I2C(1, freq=400000, scl=Pin(19), sda=Pin(18))
+adc = ADS1115(ADS1115_ADDRESS, i2c)
 
 #     Set the voltage range of the ADC to adjust the gain:
 #     Please note that you must not apply more than VDD + 0.3V to the input pins!
@@ -38,6 +38,7 @@ adc.setVoltageRange_mV(ADS1115_RANGE_6144)
 #     ADS1115_COMP_2_GND  ->  compares 2 with GND
 #     ADS1115_COMP_3_GND  ->  compares 3 with GND
 adc.setCompareChannels(ADS1115_COMP_0_GND)
+adc.setCompareChannels(ADS1115_COMP_1_GND)
 
 #     Set number of conversions after which the alert pin will assert
 #     - or you can disable the alert:   
@@ -106,9 +107,9 @@ while True:
     print("Channel 0: {:<4.2f}".format(voltage))
     voltage = readChannel(ADS1115_COMP_1_GND)
     print("Channel 1: {:<4.2f}".format(voltage))
-    voltage = readChannel(ADS1115_COMP_2_GND)
-    print("Channel 2: {:<4.2f}".format(voltage))
-    voltage = readChannel(ADS1115_COMP_3_GND)
-    print("Channel 3: {:<4.2f}".format(voltage))
+#    voltage = readChannel(ADS1115_COMP_2_GND)
+#    print("Channel 2: {:<4.2f}".format(voltage))
+#    voltage = readChannel(ADS1115_COMP_3_GND)
+#    print("Channel 3: {:<4.2f}".format(voltage))
     print("---------------")
     sleep(1)
